@@ -1,0 +1,4 @@
+name = "my-sms-bomber"
+main = "src/index.js"
+compatibility_date = "2025-09-01"  # 2025-09-01 ya uske baad ki koi bhi date
+compatibility_flags = ["nodejs_compat"]
