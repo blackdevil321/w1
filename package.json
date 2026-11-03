@@ -1,22 +1,12 @@
 {
   "name": "w1",
   "version": "1.0.0",
-  "description": "SMS Bomber - Cloudflare Workers",
-  "main": "src/index.js",
+  "main": "index.js",
   "type": "module",
   "scripts": {
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev",
-    "tail": "wrangler tail"
+    "dev": "wrangler dev"
   },
-  "keywords": [
-    "cloudflare",
-    "workers",
-    "sms"
-  ],
-  "author": "",
-  "license": "MIT",
   "devDependencies": {
     "wrangler": "^4.0.0"
   },
