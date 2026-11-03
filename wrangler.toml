@@ -1,4 +1,7 @@
 name = "w1"
 main = "index.js"
-compatibility_date = "2025-09-01"  # 2025-09-01 ya uske baad ki koi bhi date
+compatibility_date = "2026-08-04"
 compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
